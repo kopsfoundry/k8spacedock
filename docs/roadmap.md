@@ -1,0 +1,20 @@
+- **Agent hosting**: a `SpaceAgent` kind that translates into kagent resources, with per-Space model and tool allowlists.
+- **Jobs and CronJobs**: an `AppJob` kind for batch and scheduled workloads under the same Space policy.
+- **Stateful apps**: StatefulSet mode with PVC templates and backup hooks.
+- **Managed dependencies**: a `SpaceDatabase` / `SpaceCache` kind that provisions RDS or ElastiCache via ACK or Crossplane and injects credentials into Apps.
+- **External Secrets**: auto-generate ExternalSecret CRs from AWS Secrets Manager or SSM references.
+- **Gateway API**: HTTPRoute support alongside Ingress, including traffic splitting.
+- **Progressive delivery**: canary and blue-green rollouts via Argo Rollouts or Flagger integration.
+- **Per-App IAM**: automatic IRSA or EKS Pod Identity role creation, scoped to that App.
+- **Observability defaults**: per-App ServiceMonitor, dashboards and alert rules generated automatically.
+- **Cost visibility**: Space-level cost reporting via Kubecost or OpenCost labels and status fields.
+- **Space templates**: a `SpaceClass` with t-shirt sizes (S, M, L) for quotas, limits and policy.
+- **Environments**: dev, staging and prod Spaces grouped under a parent, with promotion of App versions between them.
+- **Preview environments**: short-lived Spaces per merge request with a TTL and automatic cleanup.
+- **Scale to zero**: KEDA-based event-driven autoscaling and idle scale-down for non-prod Spaces.
+- **Image security**: enforce signed images (cosign) and block images with critical CVEs at admission.
+- **Service-to-service policy**: App-level NetworkPolicies from a declared `dependsOn` list.
+- **Space lifecycle**: suspend or hibernate a whole Space (scale all Apps to 0) on a schedule.
+- **Self-service portal**: a Backstage plugin or CLI (`spacedock create app`) that generates the CRs.
+- **Multi-cluster placement**: schedule Spaces across EKS clusters by region or tier.
+- **Audit and compliance**: a status history and events export for who changed which Space or App, and when.
