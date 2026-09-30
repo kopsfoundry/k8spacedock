@@ -1,4 +1,4 @@
-# Spacedock Operator: Project Requirements
+# K8Spacedock Operator: Project Requirements
 
 **Version:** 1.0 (v1alpha1 API)
 **Audience:** Implementing coding agent and platform reviewers
@@ -8,14 +8,14 @@
 
 ## 1. Overview
 
-Spacedock is a Kubernetes operator that gives platform teams a two-level, self-service abstraction:
+K8Spacedock is a Kubernetes operator that gives platform teams a two-level, self-service abstraction:
 
 | Kind | Scope | Purpose |
 |------|-------|---------|
 | `Space` | Cluster | A governed tenant environment. It creates and manages a namespace with quotas, default limits, network isolation, pod security, access bindings and tenant policy. |
 | `App` | Namespaced (inside a Space) | A deployable stateless workload. It creates and manages the Deployment, Service, Ingress, ConfigMap, Secret wiring, HPA, PDB and ServiceAccount. |
 
-**API group:** `spacedock.io`
+**API group:** `k8spacedock.io`
 **Version:** `v1alpha1`
 **Short names:** `space` / `spc` and `sdapp`
 
@@ -48,7 +48,7 @@ Spacedock is a Kubernetes operator that gives platform teams a two-level, self-s
 | Target Kubernetes | 1.30+. Tested on the latest 3 minor versions, plus EKS. |
 | Validation | CRD OpenAPI schema + CEL (`x-kubernetes-validations`) + admission webhooks |
 | Webhook certs | cert-manager |
-| Apply strategy | Server-Side Apply with field manager `spacedock-operator` |
+| Apply strategy | Server-Side Apply with field manager `k8spacedock-operator` |
 | Tests | Go unit tests, envtest (Ginkgo/Gomega), and e2e on kind |
 | Packaging | Container image (distroless, non-root, multi-arch amd64/arm64), Helm chart, Kustomize manifests |
 | Lint | golangci-lint |
@@ -60,7 +60,7 @@ Spacedock is a Kubernetes operator that gives platform teams a two-level, self-s
 ### 3.1 Example
 
 ```yaml
-apiVersion: spacedock.io/v1alpha1
+apiVersion: k8spacedock.io/v1alpha1
 kind: Space
 metadata:
   name: team-payments
@@ -135,7 +135,7 @@ spec:
 
 | Field | Rule |
 |-------|------|
-| `spec.namespace` | DNS-1123 label, ≤ 63 chars, immutable (CEL `self == oldSelf`). It must not be a reserved namespace: `default`, `kube-*`, `spacedock-system`. |
+| `spec.namespace` | DNS-1123 label, ≤ 63 chars, immutable (CEL `self == oldSelf`). It must not be a reserved namespace: `default`, `kube-*`, `k8spacedock-system`. |
 | `spec.access[].role` | Maps to ClusterRoles `admin`, `edit` and `view`. The Helm chart can override the ClusterRole names. |
 | `spec.access[]` | `namespace` is required only when `kind=ServiceAccount` (CEL). |
 | `spec.quota.hard` | Type `corev1.ResourceList`. Optional. If it's omitted, the operator applies the cluster default quota from operator config (if one is configured). |
@@ -145,19 +145,19 @@ spec:
 
 ### 3.3 Managed resources
 
-The Space controller creates and owns these, labeled `app.kubernetes.io/managed-by=spacedock` and `spacedock.io/space=<name>`:
+The Space controller creates and owns these, labeled `app.kubernetes.io/managed-by=k8spacedock` and `k8spacedock.io/space=<name>`:
 
 1. **Namespace** with:
-   - labels `spacedock.io/space=<name>`
+   - labels `k8spacedock.io/space=<name>`
    - `pod-security.kubernetes.io/enforce=<level>`, plus `audit` and `warn` at the same level
    - the user labels and annotations from `namespaceMetadata`
-2. **ResourceQuota** `spacedock-quota`.
-3. **LimitRange** `spacedock-limits`.
+2. **ResourceQuota** `k8spacedock-quota`.
+3. **LimitRange** `k8spacedock-limits`.
 4. **NetworkPolicies**:
    - `None`: no policies.
    - `Namespace`: default deny ingress. Ingress is allowed from the same namespace and from `allowIngressFromNamespaces`. Egress follows `allowEgress`.
    - `Strict`: default deny ingress and egress. Only DNS plus explicitly listed CIDRs and namespaces are allowed.
-5. **RoleBindings**, one per `access` entry, named `spacedock-<role>-<hash>`.
+5. **RoleBindings**, one per `access` entry, named `k8spacedock-<role>-<hash>`.
 
 ### 3.4 Status
 
@@ -181,11 +181,11 @@ status:
 
 ### 3.5 Behavior
 
-- **Existing namespace.** If the target namespace exists and isn't labeled for this Space, set `NamespaceReady=False` with reason `NamespaceConflict` and don't adopt it. The annotation `spacedock.io/adopt: "true"` on the Space permits adoption.
+- **Existing namespace.** If the target namespace exists and isn't labeled for this Space, set `NamespaceReady=False` with reason `NamespaceConflict` and don't adopt it. The annotation `k8spacedock.io/adopt: "true"` on the Space permits adoption.
 - **Drift.** Manual edits to managed objects (quota, limits, policies, bindings) are reverted on the next reconcile. The controller watches all owned kinds.
 - **Removed entries.** When an `access` entry or a network rule is removed, the operator deletes the corresponding object. It prunes by label selector.
 - **Quota reduced below usage.** Kubernetes allows this. The operator surfaces it with the `QuotaExceeded` condition and a Warning event, and does not evict anything.
-- **Deletion.** The finalizer is `spacedock.io/space-cleanup`.
+- **Deletion.** The finalizer is `k8spacedock.io/space-cleanup`.
   - `Delete`: delete the namespace, wait for it to be gone, then remove the finalizer.
   - `Retain`: remove owner refs and managed-by labels from the namespace, keep its contents, then remove the finalizer.
 - **Policy changes.** When `spec.policy` changes, enqueue all Apps in the Space so they are re-evaluated.
@@ -197,7 +197,7 @@ status:
 ### 4.1 Example
 
 ```yaml
-apiVersion: spacedock.io/v1alpha1
+apiVersion: k8spacedock.io/v1alpha1
 kind: App
 metadata:
   name: checkout-api
@@ -348,9 +348,9 @@ All of these are named `<app-name>` unless noted. Each has an ownerReference to 
 ```
 app.kubernetes.io/name: <app>
 app.kubernetes.io/instance: <app>
-app.kubernetes.io/managed-by: spacedock
+app.kubernetes.io/managed-by: k8spacedock
 app.kubernetes.io/version: <tag or short digest>
-spacedock.io/space: <space>
+k8spacedock.io/space: <space>
 ```
 
 | Resource | When created |
@@ -367,7 +367,7 @@ When a feature is disabled or removed from the spec, its resource is deleted.
 
 ### 4.5 Behavior
 
-- **Rollout on config and secret change.** The pod template carries the annotation `spacedock.io/config-hash`, a SHA-256 over the ConfigMap data plus the `resourceVersion` of each referenced Secret. Any change triggers a rolling update.
+- **Rollout on config and secret change.** The pod template carries the annotation `k8spacedock.io/config-hash`, a SHA-256 over the ConfigMap data plus the `resourceVersion` of each referenced Secret. Any change triggers a rolling update.
 - **Secret watching.** Watch Secrets in Space namespaces, and use a field indexer (`spec.secrets[].name`) to enqueue the Apps that reference a changed Secret.
 - **Missing Secret.** Set `SecretsReady=False` with reason `SecretNotFound` and don't create or update the Deployment. Requeue with backoff and resolve via the watch.
 - **HPA ownership.** When autoscaling is enabled, the operator omits `spec.replicas` from its SSA apply so the HPA owns that field.
@@ -405,7 +405,7 @@ Printer columns for `kubectl get space`: `NAMESPACE`, `APPS`, `CPU-USED`, `PHASE
 
 ## 5. Controller Requirements (both controllers)
 
-1. **Idempotent reconcile.** Use Server-Side Apply for all owned objects with `ForceOwnership` under field manager `spacedock-operator`.
+1. **Idempotent reconcile.** Use Server-Side Apply for all owned objects with `ForceOwnership` under field manager `k8spacedock-operator`.
 2. **Watches.** `Owns()` all child kinds. The App controller also watches `Space` (mapping to all Apps in its namespace) and `Secret` (via the index).
 3. **Status updates** go through the status subresource and only happen when the status has changed. Always set `observedGeneration`.
 4. **Conditions** use `metav1.Condition` with the standard `Ready` aggregate.
@@ -420,25 +420,25 @@ Printer columns for `kubectl get space`: `NAMESPACE`, `APPS`, `CPU-USED`, `PHASE
 
 ## 6. Operator RBAC and Security
 
-- ClusterRole with the minimum verbs on: namespaces, resourcequotas, limitranges, networkpolicies, rolebindings, serviceaccounts, configmaps, secrets (get/list/watch only), services, deployments, ingresses, horizontalpodautoscalers, poddisruptionbudgets, events, leases, and the Spacedock CRDs and their status and finalizers.
+- ClusterRole with the minimum verbs on: namespaces, resourcequotas, limitranges, networkpolicies, rolebindings, serviceaccounts, configmaps, secrets (get/list/watch only), services, deployments, ingresses, horizontalpodautoscalers, poddisruptionbudgets, events, leases, and the K8Spacedock CRDs and their status and finalizers.
 - The operator needs `bind` on ClusterRoles `admin`, `edit` and `view` (restricted with `resourceNames`) so it can create tenant RoleBindings without holding those permissions everywhere.
 - The operator **never reads Secret data**. For the config hash it uses `resourceVersion` only. Configure the cache so Secrets are metadata-only (`metav1.PartialObjectMetadata`).
 - Operator pod: non-root, read-only root filesystem, all capabilities dropped, seccomp RuntimeDefault.
 - Tenants with `admin` or `edit` in a Space must not be able to change the operator-managed ResourceQuota, LimitRange or NetworkPolicies. The default `admin` role can't write quotas, and the operator reverts drift on the rest.
-- Provide ClusterRoles for users: `spacedock-space-admin` (manage Spaces, for the platform team) and aggregate App permissions into the `admin`, `edit` and `view` roles via aggregation labels, so Space members can manage Apps.
+- Provide ClusterRoles for users: `k8spacedock-space-admin` (manage Spaces, for the platform team) and aggregate App permissions into the `admin`, `edit` and `view` roles via aggregation labels, so Space members can manage Apps.
 
 ---
 
 ## 7. Operator Configuration
 
-Configuration comes from flags or a ConfigMap `spacedock-config` in `spacedock-system`:
+Configuration comes from flags or a ConfigMap `k8spacedock-config` in `k8spacedock-system`:
 
 | Key | Default | Purpose |
 |-----|---------|---------|
 | `defaultQuota` | none | Applied when a Space omits `quota` |
 | `defaultLimits` | none | Applied when a Space omits `limits` |
 | `defaultIngressClass` | none | Used when an App omits `ingress.className` |
-| `reservedNamespaces` | `default,kube-*,spacedock-system` | Blocked as Space namespaces |
+| `reservedNamespaces` | `default,kube-*,k8spacedock-system` | Blocked as Space namespaces |
 | `clusterRoleMapping` | `admin/edit/view` | Maps Space roles to ClusterRoles |
 | `maxConcurrentReconciles` | 5 | |
 | `webhook.failurePolicy` | `Fail` | |
@@ -448,10 +448,10 @@ Configuration comes from flags or a ConfigMap `spacedock-config` in `spacedock-s
 ## 8. Observability
 
 - Default controller-runtime metrics on `:8443` (secure, authn/authz filtered), plus custom metrics:
-  - `spacedock_spaces_total{phase}`
-  - `spacedock_apps_total{space,phase}`
-  - `spacedock_policy_violations_total{space,rule}`
-  - `spacedock_space_quota_usage_ratio{space,resource}`
+  - `k8spacedock_spaces_total{phase}`
+  - `k8spacedock_apps_total{space,phase}`
+  - `k8spacedock_policy_violations_total{space,rule}`
+  - `k8spacedock_space_quota_usage_ratio{space,resource}`
 - An optional ServiceMonitor in the Helm chart.
 - Structured JSON logs (zap) with `space`, `app`, `namespace` and `reconcileID` keys. The log level is configurable.
 - Health probes `/healthz` and `/readyz`.
@@ -461,7 +461,7 @@ Configuration comes from flags or a ConfigMap `spacedock-config` in `spacedock-s
 ## 9. Repository Layout
 
 ```
-spacedock/
+k8spacedock/
 ├── api/v1alpha1/            # space_types.go, app_types.go, webhooks
 ├── internal/
 │   ├── controller/          # space_controller.go, app_controller.go
@@ -469,7 +469,7 @@ spacedock/
 │   ├── policy/              # registry/domain/replica policy evaluation (shared by webhook + controller)
 │   └── hash/                # config hash
 ├── config/                  # kubebuilder kustomize (crd, rbac, webhook, manager, samples)
-├── charts/spacedock/        # Helm chart
+├── charts/k8spacedock/        # Helm chart
 ├── test/e2e/                # kind-based e2e
 ├── docs/                    # api-reference.md (generated), user-guide.md
 ├── Makefile
